@@ -1,10 +1,17 @@
 <div class="field">
+  <div class="girdRow" *ngFor="let row of grid">
+    <div *ngFor="let tile of row" class="gridTile" [style.height.px]="tileHeight" [style.width.px]="tileWidth">
+        <!--<div class="fill"></div>-->
+    </div>
+  </div>
   <div class="row" *ngFor="let row of fieldView; let rowIndex = index">
-    <div [ngClass]="'-color-' + tile" class="tile" [@tile]="animationsView[rowIndex][tileIndex]" *ngFor="let tile of row; let tileIndex = index" (click)='fill(rowIndex,tileIndex)'>
-      {{tile}}
+    <div *ngFor="let tile of row; let tileIndex = index" (click)="fill(rowIndex,tileIndex)" [ngClass]="'-color-' + tile" [@tile]="animationsView[rowIndex][tileIndex]" [style.height.px]="tileHeight" [style.width.px]="tileWidth" [style.top.px]="rowIndex * tileHeight " [style.left.px]="tileIndex * tileWidth" class="tile">
+        {{ tile }}
+        <!--<div class="fill"></div>-->
     </div>
   </div>
 </div>
+
 
 <div class="actions">
   <button type="button" name="button" (click)="createRandom()">Create random tile</button>

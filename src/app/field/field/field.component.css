@@ -4,25 +4,32 @@
   align-items: center;
 }
 
-.row{
+.field{
+  position: relative;
+}
+.girdRow{
   display: flex;
   flex-direction: row;
 }
 
+.gridTile{
+  background: #CDC0B4;
+  border-radius: 4px;
+}
+.actions{
+  margin-top: 32px;
+}
+
 .tile{
   align-items: center;
-  background: #CDC0B4;
   border-radius: 4px;
   color: #371722;
   display: flex;
   justify-content: center;
   font-size: 2rem;
   font-weight: 600;
-  height: 100px;
-  width: 100px;
-  margin: 4px;
+  position: absolute;
 }
-
 .tile.-color-2{ background: #EEE4DA; }
 .tile.-color-4{ background: #EDE0C8; }
 .tile.-color-8{ background: #F2B179; }
@@ -35,7 +42,3 @@
 .tile.-color-1024{ background: #4b9b06; }
 .tile.-color-4096{ background: #545951; }
 .tile.-color-8192{ background: #383a37; }
-
-.actions{
-  margin-top: 32px;
-}

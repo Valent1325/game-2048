@@ -1,6 +1,7 @@
 import { Component, OnInit, HostListener, trigger, state, style, transition, animate, keyframes } from '@angular/core';
 import { BehaviorSubject } from  'rxjs';
 
+
 export type FieldState = number [][];
 
 export type Direction = 'top' | 'right' | 'bottom' | 'left';
@@ -23,21 +24,33 @@ export const AnimationDuration = 300;
       state('moveRight',   style({})),
       transition('base => updated', [
         animate(AnimationDuration, keyframes([
-          style({transform: 'scale(1)', offset: 0}),
-          style({transform: 'scale(1.1)',  offset: 0.3}),
-          style({transform: 'scale(1)',     offset: 1.0})
+          style({transform: 'scale(1)', zIndex: 1, offset: 0}),
+          style({transform: 'scale(1.1)', zIndex: 1, offset: 0.3}),
+          style({transform: 'scale(1)', zIndex: 1, offset: 1.0})
         ]))
       ]),
       transition('base => moveLeft', [
         animate(AnimationDuration, keyframes([
-          style({transform: 'translateX(0)', offset: 0}),
-          style({transform: 'translateX(-100%)',  offset: 1}),
+          style({transform: 'translateX(0)', zIndex: 1, offset: 0}),
+          style({transform: 'translateX(-100%)', zIndex: 1,  offset: 1}),
         ]))
       ]),
       transition('base => moveRight', [
         animate(AnimationDuration, keyframes([
-          style({transform: 'translateX(0)', offset: 0}),
-          style({transform: 'translateX(100%)',  offset: 1}),
+          style({transform: 'translateX(0)', zIndex: 1, offset: 0}),
+          style({transform: 'translateX(100%)', zIndex: 1,  offset: 1}),
+        ]))
+      ]),
+      transition('base => moveTop', [
+        animate(AnimationDuration, keyframes([
+          style({transform: 'translateY(0)', zIndex: 1, offset: 0}),
+          style({transform: 'translateY(-100%)', zIndex: 1,  offset: 1}),
+        ]))
+      ]),
+      transition('base => moveDown', [
+        animate(AnimationDuration, keyframes([
+          style({transform: 'translateY(0)', zIndex: 1, offset: 0}),
+          style({transform: 'translateY(100%)', zIndex: 1,  offset: 1}),
         ]))
       ]),
     ])
@@ -64,6 +77,7 @@ export class FieldComponent implements OnInit {
   private size : number = 4;
   private baseValue : number = 2;
 
+  private grid = new Array(this.size).fill(new Array(this.size).fill(null));
   //private state$ = new BehaviorSubject<FieldState>(new Array(this.size).fill(null).map(_ => new Array(this.size).fill(null)));
 
   private field: FieldState = new Array(this.size).fill(null).map(_ => new Array(this.size).fill(null));
@@ -71,6 +85,9 @@ export class FieldComponent implements OnInit {
 
   private animations: AnimationState;
   private animationsView: AnimationState;
+
+  tileWidth = 100;
+  tileHeight = 100;
 
 
   constructor() { }
@@ -118,7 +135,11 @@ export class FieldComponent implements OnInit {
         if(this.field[rowIndex][tileIndex] !== null){
         // move to top edge
           for(let searchIndex = rowIndex; searchIndex > 0; searchIndex--){
-            if(!this.mergeTiles(this.field, searchIndex, tileIndex, 'top')){
+            if(this.mergeTiles(this.field, searchIndex, tileIndex, 'top')){
+              if(searchIndex === tileIndex){
+                this.animations[rowIndex][tileIndex] = 'moveTop';
+              }
+            } else {
               break;
             }
           }
@@ -163,7 +184,11 @@ export class FieldComponent implements OnInit {
       for(let tileIndex = 0; tileIndex <= this.size - 1; tileIndex++){
         if(this.field[rowIndex][tileIndex] !== null){
           for(let searchIndex = rowIndex; searchIndex <= this.size - 1; searchIndex++){
-            if(!this.mergeTiles(this.field, searchIndex, tileIndex, 'bottom')){
+            if(this.mergeTiles(this.field, searchIndex, tileIndex, 'bottom')){
+              if(searchIndex === tileIndex){
+                this.animations[rowIndex][tileIndex] = 'moveDown';
+              }
+            } else{
               break;
             }
           }
@@ -181,7 +206,11 @@ export class FieldComponent implements OnInit {
       for(let tileIndex = 0; tileIndex <= this.size - 1; tileIndex++){
         if(this.field[rowIndex][tileIndex] !== null){
           for(let searchIndex = tileIndex; searchIndex > 0; searchIndex--){
-            if(!this.mergeTiles(this.field, rowIndex, searchIndex, 'left')){
+            if(this.mergeTiles(this.field, rowIndex, searchIndex, 'left')){
+              if(searchIndex === tileIndex){
+                this.animations[rowIndex][tileIndex] = 'moveLeft';
+              }
+            } else{
               break;
             }
           }
@@ -221,7 +250,7 @@ export class FieldComponent implements OnInit {
     this.animations = new Array(this.size).fill(null).map(_ => new Array(this.size).fill('base'));
   }
 
-  render(animate: true){
+  render(animate = true){
     if(animate){
       this.animationsView = this.clone(this.animations);
       setTimeout(() => {
