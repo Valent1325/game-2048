@@ -1,13 +1,14 @@
 import { Component, OnInit, HostListener, trigger, state, style, transition, animate, keyframes } from '@angular/core';
 import { BehaviorSubject } from  'rxjs';
+import { compile } from '../animations';
 
 
+const size : number = 4;
+const baseValue : number = 2;
 export type FieldState = number [][];
-
-export type Direction = 'top' | 'right' | 'bottom' | 'left';
-
+export type Direction = 'top' | 'right' | 'down' | 'left';
 export type AnimationState = Animation[][];
-export type Animation = 'base' | 'moveTop' | 'moveRight' | 'moveDown' | 'moveLeft';
+export type Animation = string;
 export const AnimationDuration = 300;
 
 @Component({
@@ -15,49 +16,31 @@ export const AnimationDuration = 300;
   templateUrl: './field.component.html',
   styleUrls: ['./field.component.css'],
   animations: [
-    trigger('tile', [
-      state('base', style({
-        transform: 'translateX(0) scale(1)',
-      })),
-      state('updated',   style({})),
-      state('moveLeft',   style({})),
-      state('moveRight',   style({})),
-      transition('base => updated', [
-        animate(AnimationDuration, keyframes([
-          style({transform: 'scale(1)', zIndex: 1, offset: 0}),
-          style({transform: 'scale(1.1)', zIndex: 1, offset: 0.3}),
-          style({transform: 'scale(1)', zIndex: 1, offset: 1.0})
-        ]))
-      ]),
-      transition('base => moveLeft', [
-        animate(AnimationDuration, keyframes([
-          style({transform: 'translateX(0)', zIndex: 1, offset: 0}),
-          style({transform: 'translateX(-100%)', zIndex: 1,  offset: 1}),
-        ]))
-      ]),
-      transition('base => moveRight', [
-        animate(AnimationDuration, keyframes([
-          style({transform: 'translateX(0)', zIndex: 1, offset: 0}),
-          style({transform: 'translateX(100%)', zIndex: 1,  offset: 1}),
-        ]))
-      ]),
-      transition('base => moveTop', [
-        animate(AnimationDuration, keyframes([
-          style({transform: 'translateY(0)', zIndex: 1, offset: 0}),
-          style({transform: 'translateY(-100%)', zIndex: 1,  offset: 1}),
-        ]))
-      ]),
-      transition('base => moveDown', [
-        animate(AnimationDuration, keyframes([
-          style({transform: 'translateY(0)', zIndex: 1, offset: 0}),
-          style({transform: 'translateY(100%)', zIndex: 1,  offset: 1}),
-        ]))
-      ]),
-    ])
+     compile(size, AnimationDuration),
   ]
 })
 export class FieldComponent implements OnInit {
 
+  tileWidth = 100;
+  tileHeight = 100;
+  private grid = new Array(size).fill(new Array(size).fill(null));
+
+  private field: FieldState = new Array(size).fill(null).map(_ => new Array(size).fill(null));
+  private fieldView : FieldState;
+  private fieldMergeBlock: boolean[][];
+
+  private animations: AnimationState;
+  private animationsView: AnimationState;
+
+  constructor() { }
+
+  ngOnInit() {
+    this.resetAnimations();
+    this.createRandom();
+    this.render(false);
+  }
+
+  // Обработка событий по стрелочкам
   @HostListener('document:keydown.ArrowUp') arrowUp(){
     this.moveTop();
   };
@@ -74,182 +57,200 @@ export class FieldComponent implements OnInit {
     this.moveLeft();
   };
 
-  private size : number = 4;
-  private baseValue : number = 2;
-
-  private grid = new Array(this.size).fill(new Array(this.size).fill(null));
-  //private state$ = new BehaviorSubject<FieldState>(new Array(this.size).fill(null).map(_ => new Array(this.size).fill(null)));
-
-  private field: FieldState = new Array(this.size).fill(null).map(_ => new Array(this.size).fill(null));
-  private fieldView : FieldState;
-
-  private animations: AnimationState;
-  private animationsView: AnimationState;
-
-  tileWidth = 100;
-  tileHeight = 100;
-
-
-  constructor() { }
-
-  ngOnInit() {
-    this.resetAnimations();
-    this.createRandom();
-    this.render(false);
-  }
-
+  // Тестовая функция
   fill(x : number, y : number){
-    this.field[x][y] = this.baseValue;
-    //let field = this.state$.value;
-    //field[x][y] = this.baseValue;
+    this.field[x][y] = baseValue;
   }
 
+  //Создание рандомного поля с цифрой
   createRandom(){
-    //let field = this.state$.value;
     let empties = [];
+    let max = baseValue;
     this.field.forEach((row, rowIndex) => {
       row.forEach((tile,tileIndex) => {
         if(tile === null){
           empties.push([rowIndex, tileIndex]);
+        } else if (tile > max){
+          max = tile;
         }
-      })
+      });
     });
 
     if(empties.length === 0){
       alert('Game over');
     }
 
-    let coords = empties[Math.floor(Math.random()*empties.length)];
-    this.field[coords[0]][coords[1]] = this.baseValue;
+    let value = baseValue;
+    if (max > baseValue ** baseValue ){
+      const end = max / baseValue ** baseValue;
+       let current = baseValue;
+       let stack = [];
+       while (current <= end) {
+         stack.push(current);
+         current *= baseValue;
+       }
+       value = stack[Math.floor(Math.random() * stack.length)];
+    }
 
-    //this.state$.next(field);
+    let coords = empties[Math.floor(Math.random()*empties.length)];
+    this.field[coords[0]][coords[1]] = value;
+
   }
 
 // Движение вврех
   moveTop(){
-    //let field = this.state$.value;
-    // move from bottom to top
-    for(let rowIndex = 0; rowIndex <= this.size - 1; rowIndex++){
-    // move from left to right
-      for(let tileIndex = 0; tileIndex <= this.size - 1; tileIndex++){
+    // передвижение снизу вверх
+    this.initMovement();
+    let moved = false;
+    for(let rowIndex = 0; rowIndex <= size - 1; rowIndex++){
+    // передвижение слево направа
+      for(let tileIndex = 0; tileIndex <= size - 1; tileIndex++){
         if(this.field[rowIndex][tileIndex] !== null){
-        // move to top edge
-          for(let searchIndex = rowIndex; searchIndex > 0; searchIndex--){
-            if(this.mergeTiles(this.field, searchIndex, tileIndex, 'top')){
-              if(searchIndex === tileIndex){
-                this.animations[rowIndex][tileIndex] = 'moveTop';
+          let searchIndex;
+          for(searchIndex = rowIndex; searchIndex >= 0; searchIndex--){
+            let mergeResult = this.mergeTiles(this.field, searchIndex, tileIndex, 'top');
+            if (mergeResult !== false) {
+              const diff = mergeResult === true ? rowIndex - searchIndex + 1 : rowIndex - searchIndex;
+              if (diff !== 0) {
+                moved = true;
+                this.animations[rowIndex][tileIndex] = `moveTop-${diff}`;
               }
-            } else {
               break;
             }
           }
         }
       }
     }
-    this.createRandom();
-    this.render();
+    if (moved){
+      this.createRandom();
+      this.render();
+    }
   }
 
 // Движение вправо
   moveRight(){
-    //let field = this.state$.value;
-    // move from top to bottom
-    for(let rowIndex = 0; rowIndex <= this.size - 1; rowIndex++){
-    // move from right to left
-      for(let tileIndex = this.size - 1; tileIndex >= 0; tileIndex--){
-        // check value & edge
-        if(this.field[rowIndex][tileIndex] !== null){
-        // move to right edge
-          for(let searchIndex = tileIndex; searchIndex <= this.size - 1; searchIndex++){
-            if(this.mergeTiles(this.field, rowIndex, searchIndex, 'right')){
-              if(searchIndex === tileIndex){
-                this.animations[rowIndex][tileIndex] = 'moveRight';
+  this.initMovement();
+    let moved = false;
+    for (let rowIndex = 0; rowIndex < size; rowIndex++) {
+      for (let tileIndex = size - 1; tileIndex >= 0; tileIndex--) {
+        if (this.field[rowIndex][tileIndex] !== null) {
+          let searchIndex;
+          for (searchIndex = tileIndex; searchIndex < size; searchIndex++) {
+            let mergeResult = this.mergeTiles(this.field, rowIndex, searchIndex, 'right');
+            if (mergeResult !== false) {
+              const diff = mergeResult === true ? searchIndex - tileIndex + 1 : searchIndex - tileIndex;
+              if (diff !== 0) {
+                moved = true;
+                this.animations[rowIndex][tileIndex] = `moveRight-${diff}`;
               }
-            } else{
               break;
             }
           }
         }
       }
     }
-    this.createRandom();
-    this.render();
+    if (moved) {
+      this.createRandom();
+      this.render();
+    }
   }
 
 
   //Движение вниз
   moveDown(){
-    //let field = this.state$.value;
-    for(let rowIndex = this.size - 1; rowIndex >= 0; rowIndex--){
-      for(let tileIndex = 0; tileIndex <= this.size - 1; tileIndex++){
-        if(this.field[rowIndex][tileIndex] !== null){
-          for(let searchIndex = rowIndex; searchIndex <= this.size - 1; searchIndex++){
-            if(this.mergeTiles(this.field, searchIndex, tileIndex, 'bottom')){
-              if(searchIndex === tileIndex){
-                this.animations[rowIndex][tileIndex] = 'moveDown';
+  this.initMovement();
+    let moved = false;
+    for (let rowIndex = size - 1; rowIndex >= 0; rowIndex--) {
+      for (let tileIndex = 0; tileIndex < size; tileIndex++) {
+        if (this.field[rowIndex][tileIndex] !== null) {
+          let searchIndex;
+          for (searchIndex = rowIndex; searchIndex < size; searchIndex++) {
+            let mergeResult = this.mergeTiles(this.field, searchIndex, tileIndex, 'down');
+            if (mergeResult !== false) {
+              const diff = mergeResult === true ? searchIndex - rowIndex + 1 : searchIndex - rowIndex;
+              if (diff !== 0) {
+                moved = true;
+                this.animations[rowIndex][tileIndex] = `moveDown-${diff}`;
               }
-            } else{
               break;
             }
           }
         }
       }
     }
-    this.createRandom();
-    this.render();
-  }
+    if (moved) {
+      this.createRandom();
+      this.render();
+    }
+}
 
   // Движение влево
   moveLeft(){
-    //let field = this.state$.value;
-    for(let rowIndex = 0; rowIndex <= this.size - 1; rowIndex++){
-      for(let tileIndex = 0; tileIndex <= this.size - 1; tileIndex++){
-        if(this.field[rowIndex][tileIndex] !== null){
-          for(let searchIndex = tileIndex; searchIndex > 0; searchIndex--){
-            if(this.mergeTiles(this.field, rowIndex, searchIndex, 'left')){
-              if(searchIndex === tileIndex){
-                this.animations[rowIndex][tileIndex] = 'moveLeft';
-              }
-            } else{
-              break;
+  this.initMovement();
+  let moved = false;
+  for (let rowIndex = 0; rowIndex < size; rowIndex++) {
+    for (let tileIndex = 0; tileIndex < size; tileIndex++) {
+      if (this.field[rowIndex][tileIndex] !== null) {
+        let searchIndex;
+        for (searchIndex = tileIndex; searchIndex >= 0; searchIndex--) {
+          let mergeResult = this.mergeTiles(this.field, rowIndex, searchIndex, 'left');
+          if (mergeResult !== false) {
+            const diff = mergeResult === true ? tileIndex - searchIndex + 1 : tileIndex - searchIndex;
+            if (diff !== 0) {
+              moved = true;
+              this.animations[rowIndex][tileIndex] = `moveLeft-${diff}`;
             }
+            break;
           }
         }
       }
     }
+  }
+  if (moved) {
     this.createRandom();
     this.render();
   }
+}
 
-
+  // Функция проверки
+  // Определяем в какую сторону двигаться, проверяем возможность сложения двух полей.
   private mergeTiles(field : FieldState, rowIndex : number, tileIndex : number, direction : Direction){
 
     const size = field.length;
     const tileValue = field[rowIndex][tileIndex];
-    const destRowIndex = direction === 'top' ? rowIndex - 1 : direction === 'bottom' ? rowIndex + 1 : rowIndex;
+    const destRowIndex = direction === 'top' ? rowIndex - 1 : direction === 'down' ? rowIndex + 1 : rowIndex;
     const destTileIndex = direction === 'left' ? tileIndex - 1 : direction === 'right' ? tileIndex + 1 : tileIndex;
 
     if(destRowIndex >= 0 && destRowIndex < size && destTileIndex >= 0 && destTileIndex < size){
       if(field[destRowIndex][destTileIndex] === null){
         field[destRowIndex][destTileIndex] = tileValue;
         field[rowIndex][tileIndex] = null;
-        return true;
+        return false;
       } else if(field[destRowIndex][destTileIndex] === tileValue){
         field[destRowIndex][destTileIndex] *= 2;
         field[rowIndex][tileIndex] = null;
-        return false;
+         this.fieldMergeBlock[destRowIndex][destTileIndex] = true;
+        return true;
       } else {
-        return false;
+        return null;
       }
     } else {
-      return false;
+      return null;
     }
   }
 
+  //Сброс анимации
   resetAnimations(){
-    this.animations = new Array(this.size).fill(null).map(_ => new Array(this.size).fill('base'));
+    this.animations = new Array(size).fill(null).map(_ => new Array(size).fill('base'));
   }
 
+
+  //Инициализация движения
+  private initMovement() {
+    this.fieldMergeBlock = new Array(size).fill(false).map(_ => new Array(size).fill(false));
+  }
+
+  //Рендеринг анимации
   render(animate = true){
     if(animate){
       this.animationsView = this.clone(this.animations);
